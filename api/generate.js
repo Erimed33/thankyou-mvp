@@ -1,3 +1,4 @@
+import 'dotenv/config';
 // This function will run when someone hits /api/generate
 // Vercel treats any file in /api as an API endpoint
 export default async function handler(req, res) {
@@ -36,6 +37,7 @@ export default async function handler(req, res) {
 
     // Turn the response into JSON we can use
     const data = await response.json();
+console.log("OpenAI response:", data);
 
     // Safely pull the generated message from the response
     const message = data.choices?.[0]?.message?.content?.trim();
