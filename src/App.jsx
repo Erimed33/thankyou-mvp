@@ -9,86 +9,85 @@ function App() {
     product: "",
   });
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false); // new loading state
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
- // This function runs when the user submits the form
-const handleSubmit = async (e) => {
-  e.preventDefault(); // Stop the page from refreshing when the form submits
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  // Check if the user filled out both fields
-  if (!formData.name || !formData.product) {
-    setMessage("Please fill out both name and product fields."); // show error message
-    return; // stop running the rest of the code
-  }
-
-  // Show a "loading" message while we wait for the API
-  setMessage("Generating your note...");
-
-  try {
-    // Send the form data to our backend API (/api/generate.js)
-    const response = await fetch("/.netlify/functions/generate", {
-      method: "POST", // we are sending data
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ...formData, messageType: activeTab }), // turn the JS object into a string
-    });
-
-    // Check if the response is ok
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!formData.name || !formData.product) {
+      setMessage("Please fill out both name and product fields.");
+      return;
     }
 
-    // Turn the response into usable JSON
-    const data = await response.json();
-    console.log("API Response:", data);
+    setLoading(true);
+    setMessage("✨ Generating your note...");
 
-    // If the backend gave us a note, show it to the user
-    if (data.note) {
-      setMessage(data.note);
-    } else {
-      // If no note came back, show a fallback error message
-      setMessage("Could not generate a note. Please try again.");
+    try {
+      // ✅ Correct Netlify Function URL
+      const response = await fetch("/.netlify/functions/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // send current tab type too (thankyou/apology/etc.)
+        body: JSON.stringify({ ...formData, messageType: activeTab }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      if (data.note) {
+        setMessage(data.note);
+      } else {
+        setMessage("⚠️ Could not generate a note. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setMessage("🚧 The system is busy. Please try again in a moment.");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    // If the fetch request itself fails (like no internet or server crash)
-    setMessage("The system is busy. Please try again in a moment.");
-  }
-};
-
+  };
 
   return (
     <div className="app-container">
       <div className="app-header">
         <h1>✨ Thank You Note Generator</h1>
-        <p className="app-subtitle">Create personalized thank you messages in seconds</p>
+        <p className="app-subtitle">
+          Create personalized thank you messages in seconds
+        </p>
       </div>
-      
+
       <div className="app-content">
         {/* Tab Navigation */}
         <div className="tab-navigation">
-          <button 
+          <button
             className={`tab-button ${activeTab === "thankyou" ? "active" : ""}`}
             onClick={() => setActiveTab("thankyou")}
           >
             💜 Thank You
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === "apology" ? "active" : ""}`}
             onClick={() => setActiveTab("apology")}
           >
             🙏 Apology
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === "welcome" ? "active" : ""}`}
             onClick={() => setActiveTab("welcome")}
           >
             👋 Welcome
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === "followup" ? "active" : ""}`}
             onClick={() => setActiveTab("followup")}
           >
@@ -99,9 +98,7 @@ const handleSubmit = async (e) => {
         <div className="form-container">
           <form onSubmit={handleSubmit} className="thank-you-form">
             <div className="form-group">
-              <label htmlFor="name">
-                Recipient's Name *
-              </label>
+              <label htmlFor="name">Recipient's Name *</label>
               <input
                 id="name"
                 name="name"
@@ -112,11 +109,9 @@ const handleSubmit = async (e) => {
                 required
               />
             </div>
-            
+
             <div className="form-group">
-              <label htmlFor="email">
-                Email Address
-              </label>
+              <label htmlFor="email">Email Address</label>
               <input
                 id="email"
                 name="email"
@@ -126,7 +121,7 @@ const handleSubmit = async (e) => {
                 placeholder="Enter email address (optional)"
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="product">
                 {activeTab === "thankyou" && "Product/Service *"}
@@ -141,21 +136,29 @@ const handleSubmit = async (e) => {
                 value={formData.product}
                 onChange={handleChange}
                 placeholder={
-                  activeTab === "thankyou" ? "What did they help you with?" :
-                  activeTab === "apology" ? "What issue occurred?" :
-                  activeTab === "welcome" ? "What service/product are they joining?" :
-                  "What should we follow up about?"
+                  activeTab === "thankyou"
+                    ? "What did they help you with?"
+                    : activeTab === "apology"
+                    ? "What issue occurred?"
+                    : activeTab === "welcome"
+                    ? "What service/product are they joining?"
+                    : "What should we follow up about?"
                 }
                 required
               />
             </div>
-            
-            <button type="submit" className="generate-button">
+
+            <button type="submit" className="generate-button" disabled={loading}>
               <span className="button-text">
-                {activeTab === "thankyou" && "Generate Thank You Note"}
-                {activeTab === "apology" && "Generate Apology Note"}
-                {activeTab === "welcome" && "Generate Welcome Message"}
-                {activeTab === "followup" && "Generate Follow-up Message"}
+                {loading
+                  ? "Generating..."
+                  : activeTab === "thankyou"
+                  ? "Generate Thank You Note"
+                  : activeTab === "apology"
+                  ? "Generate Apology Note"
+                  : activeTab === "welcome"
+                  ? "Generate Welcome Message"
+                  : "Generate Follow-up Message"}
               </span>
               <span className="button-icon">
                 {activeTab === "thankyou" && "💜"}
@@ -166,7 +169,7 @@ const handleSubmit = async (e) => {
             </button>
           </form>
         </div>
-        
+
         {message && (
           <div className="message-container">
             <div className="message-header">
@@ -186,7 +189,7 @@ const handleSubmit = async (e) => {
             <div className="message-content">
               <p>{message}</p>
             </div>
-            <button 
+            <button
               className="copy-button"
               onClick={() => navigator.clipboard.writeText(message)}
             >
@@ -200,4 +203,3 @@ const handleSubmit = async (e) => {
 }
 
 export default App;
-
